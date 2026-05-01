@@ -1,8 +1,4 @@
-// DotaRankWidget.js
-// Remote core for DotaRank Widget v2.
-// User settings are passed from Scriptable Loader.
-
-const DOTARANK_VERSION = "2.0.1";
+const DOTARANK_VERSION = "2.0.2";
 
 const USER_CONFIG = globalThis.DOTARANK_CONFIG || {};
 
@@ -31,10 +27,6 @@ const THEME = USER_CONFIG.theme || "purple";
 const GITHUB_RAW_BASE =
   USER_CONFIG.githubRawBase ||
   "https://raw.githubusercontent.com/Floca1488/Dota-Rank-Widget/main/icons";
-
-// =========================
-// LOCALIZATION
-// =========================
 
 const I18N = {
   ru: {
@@ -93,10 +85,6 @@ const I18N = {
 
 const T = I18N[LANGUAGE] || I18N.ru;
 
-// =========================
-// THEMES
-// =========================
-
 const THEMES = {
   purple: {
     bgTop: "#09090B",
@@ -151,17 +139,9 @@ const ACCENT = new Color(THEME_DATA.accent);
 const WIN = new Color("#86EFAC");
 const LOSS = new Color("#FCA5A5");
 
-// =========================
-// STORAGE KEYS
-// =========================
-
 const STORAGE_KEY_PTS = `dota_pts_${ACCOUNT_ID}`;
 const STORAGE_KEY_MATCH = `dota_last_ranked_match_${ACCOUNT_ID}`;
 const STORAGE_ICON_STYLE = `dota_icon_style_${ACCOUNT_ID}`;
-
-// =========================
-// MAIN
-// =========================
 
 const widget = await createWidget();
 widget.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
@@ -210,10 +190,6 @@ async function createWidget() {
   w.url = `https://www.opendota.com/players/${ACCOUNT_ID}`;
   return w;
 }
-
-// =========================
-// DATA
-// =========================
 
 async function loadData() {
   const iconStyle = await getIconStyle();
@@ -298,10 +274,6 @@ async function loadData() {
   };
 }
 
-// =========================
-// ICON STYLE
-// =========================
-
 async function getIconStyle() {
   if (RESET_ICON_STYLE && Keychain.contains(STORAGE_ICON_STYLE)) {
     Keychain.remove(STORAGE_ICON_STYLE);
@@ -341,7 +313,6 @@ async function loadRankImage(fileName, iconStyle) {
     try {
       fm.remove(cacheFolder);
     } catch (e) {
-      // Ignore cache removal errors and try to use or recreate the folder.
     }
   }
 
@@ -367,10 +338,6 @@ async function loadRankImage(fileName, iconStyle) {
 
   return image;
 }
-
-// =========================
-// PTS AUTO TRACKING
-// =========================
 
 function updatePtsFromMatches(matches) {
   if (MANUAL_PTS_OVERRIDE !== null && isFinite(MANUAL_PTS_OVERRIDE)) {
@@ -499,10 +466,6 @@ function isTrackedMatch(match) {
   return match.lobby_type === 7;
 }
 
-// =========================
-// SMALL
-// =========================
-
 async function buildSmall(w, data) {
   w.setPadding(10, 10, 9, 10);
 
@@ -577,10 +540,6 @@ async function buildSmall(w, data) {
   updated.textColor = SUBTLE;
   updated.textOpacity = 0.65;
 }
-
-// =========================
-// MEDIUM
-// =========================
 
 async function buildMedium(w, data) {
   w.setPadding(12, 13, 11, 13);
@@ -712,10 +671,6 @@ async function buildMedium(w, data) {
   total.lineLimit = 1;
   total.minimumScaleFactor = 0.55;
 }
-
-// =========================
-// LARGE
-// =========================
 
 async function buildLarge(w, data) {
   w.setPadding(15, 15, 14, 15);
@@ -869,10 +824,6 @@ async function buildLarge(w, data) {
   source.textOpacity = 0.6;
 }
 
-// =========================
-// UI HELPERS
-// =========================
-
 function addHeader(parent, data, opts) {
   const header = parent.addStack();
   header.layoutHorizontally();
@@ -1016,10 +967,6 @@ function formatPercent(value) {
   return `${value.toFixed(1)}%`;
 }
 
-// =========================
-// STATS HELPERS
-// =========================
-
 function getLastNStats(matches, n) {
   const list = Array.isArray(matches) ? matches.slice(0, n) : [];
   let wins = 0;
@@ -1076,10 +1023,6 @@ function getStreak(matches) {
     text: type ? `${type}${count}` : "—"
   };
 }
-
-// =========================
-// RANKS BY PTS
-// =========================
 
 function getRankByPts(pts) {
   const ranks = getRanks();
@@ -1184,10 +1127,6 @@ function getRanks() {
   ];
 }
 
-// =========================
-// HEROES
-// =========================
-
 async function getHeroesMap() {
   const fm = FileManager.local();
   const cachePath = fm.joinPath(fm.documentsDirectory(), "dota_heroes_cache.json");
@@ -1224,10 +1163,6 @@ function getHeroName(heroId, heroes) {
 
   return h.localized_name || h.name || `Hero ${heroId}`;
 }
-
-// =========================
-// FETCH / UTIL
-// =========================
 
 async function safeFetchJson(url, fallback) {
   try {
