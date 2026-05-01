@@ -1,35 +1,27 @@
 // DotaRankWidget.js
-// iOS Scriptable widget for Dota 2 rank, PTS/MMR and recent matches.
-// Icons are loaded from GitHub: default / umbrella.
+// Remote core file for DotaRank Widget.
+// Do not edit user settings here. User settings are passed from Loader.
 
-// =========================
-// USER SETTINGS
-// =========================
+const DOTARANK_VERSION = "1.0.0";
 
-// OpenDota / Steam account ID
-const ACCOUNT_ID = "1643456704";
+const USER_CONFIG = globalThis.DOTARANK_CONFIG || {};
 
-// Current PTS/MMR at first setup
-const START_PTS = 2169;
+const ACCOUNT_ID = String(USER_CONFIG.accountId || "1643456704");
+const START_PTS = Number(USER_CONFIG.startPts ?? 2169);
 
-// Put true only once if you want to reset stored PTS to START_PTS
-const RESET_PTS = false;
+const RESET_PTS = Boolean(USER_CONFIG.resetPts || false);
+const RESET_ICON_STYLE = Boolean(USER_CONFIG.resetIconStyle || false);
 
-// Put true only once if you want to choose icon style again
-const RESET_ICON_STYLE = false;
+const PTS_WIN = Number(USER_CONFIG.ptsWin ?? 25);
+const PTS_LOSS = Number(USER_CONFIG.ptsLoss ?? 25);
 
-// Usually ranked match gives about +25 / -25
-const PTS_WIN = 25;
-const PTS_LOSS = 25;
+const TRACK_RANKED_ONLY = USER_CONFIG.trackRankedOnly !== false;
 
-// Only ranked matches
-const TRACK_RANKED_ONLY = true;
+const PREVIEW_SIZE = USER_CONFIG.previewSize || "small";
 
-// Preview inside Scriptable: "small", "medium", "large"
-const PREVIEW_SIZE = "small";
-
-// Your GitHub icons folder
-const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/Floca1488/Dota-Rank-Widget/main/icons";
+const GITHUB_RAW_BASE =
+  USER_CONFIG.githubRawBase ||
+  "https://raw.githubusercontent.com/Floca1488/Dota-Rank-Widget/main/icons";
 
 // =========================
 // COLORS
@@ -146,7 +138,7 @@ async function loadData() {
 }
 
 // =========================
-// ICON STYLE SELECTOR
+// ICON STYLE
 // =========================
 
 async function getIconStyle() {
@@ -253,7 +245,9 @@ function updatePtsFromMatches(matches) {
     };
   }
 
-  const savedIndex = trackedMatches.findIndex(m => String(m.match_id) === savedMatchId);
+  const savedIndex = trackedMatches.findIndex(
+    m => String(m.match_id) === savedMatchId
+  );
 
   let newMatches = [];
 
@@ -300,12 +294,11 @@ function isTrackedMatch(match) {
   if (!match) return false;
   if (!TRACK_RANKED_ONLY) return true;
 
-  // Ranked matchmaking in OpenDota is usually lobby_type 7
   return match.lobby_type === 7;
 }
 
 // =========================
-// SMALL WIDGET
+// SMALL
 // =========================
 
 async function buildSmall(w, data) {
@@ -379,7 +372,7 @@ async function buildSmall(w, data) {
 }
 
 // =========================
-// MEDIUM WIDGET
+// MEDIUM
 // =========================
 
 async function buildMedium(w, data) {
@@ -470,7 +463,7 @@ async function buildMedium(w, data) {
 }
 
 // =========================
-// LARGE WIDGET
+// LARGE
 // =========================
 
 async function buildLarge(w, data) {
@@ -559,7 +552,7 @@ async function buildLarge(w, data) {
 
   footer.addSpacer();
 
-  const source = footer.addText(data.iconStyle);
+  const source = footer.addText(`${data.iconStyle} · v${DOTARANK_VERSION}`);
   source.font = Font.systemFont(10);
   source.textColor = SUBTLE;
   source.textOpacity = 0.6;
