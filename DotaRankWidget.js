@@ -38,7 +38,6 @@ const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/Floca1488/Dota-Rank-W
 const BG_TOP = new Color("#09090B");
 const BG_BOTTOM = new Color("#201126");
 
-const CARD = new Color("#FFFFFF", 0.10);
 const CARD_STRONG = new Color("#FFFFFF", 0.13);
 const CARD_SOFT = new Color("#FFFFFF", 0.075);
 
@@ -146,6 +145,10 @@ async function loadData() {
   };
 }
 
+// =========================
+// ICON STYLE SELECTOR
+// =========================
+
 async function getIconStyle() {
   if (RESET_ICON_STYLE && Keychain.contains(STORAGE_ICON_STYLE)) {
     Keychain.remove(STORAGE_ICON_STYLE);
@@ -165,7 +168,6 @@ async function getIconStyle() {
   alert.message = "Choose rank icon style";
   alert.addAction("Default");
   alert.addAction("Umbrella");
-  alert.addCancelAction("Default");
 
   const result = await alert.presentAlert();
   const style = result === 1 ? "umbrella" : "default";
