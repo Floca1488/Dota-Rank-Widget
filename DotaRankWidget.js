@@ -2,7 +2,7 @@
 // Remote core file for DotaRank Widget.
 // Do not edit user settings here. User settings are passed from Loader.
 
-const DOTARANK_VERSION = "1.0.0";
+const DOTARANK_VERSION = "1.0.1";
 
 const USER_CONFIG = globalThis.DOTARANK_CONFIG || {};
 
@@ -54,10 +54,10 @@ const STORAGE_ICON_STYLE = `dota_icon_style_${ACCOUNT_ID}`;
 // =========================
 
 const widget = await createWidget();
+
 widget.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
 
 Script.setWidget(widget);
-Script.complete();
 
 if (!config.runsInWidget) {
   if (PREVIEW_SIZE === "large") {
@@ -68,6 +68,8 @@ if (!config.runsInWidget) {
     await widget.presentSmall();
   }
 }
+
+Script.complete();
 
 async function createWidget() {
   const w = new ListWidget();
@@ -108,19 +110,40 @@ async function loadData() {
 
   const name = player?.profile?.personaname || "Dota Player";
   const avatarUrl = player?.profile?.avatarfull || player?.profile?.avatarmedium || null;
-  const avatar = avatarUrl ? await fetchImage(avatarUrl) : null;
+
+  let avatar = null;
+
+  if (avatarUrl) {
+    try {
+      avatar = await fetchImage(avatarUrl);
+    } catch (e) {
+      avatar = null;
+    }
+  }
 
   const matches = Array.isArray(recent) ? recent : [];
-  const displayMatch = matches.length > 0 ? matches[0] : null;
+
+  const displayMatch = TRACK_RANKED_ONLY
+    ? getLatestTrackedMatch(matches)
+    : (matches.length > 0 ? matches[0] : null);
 
   const lastResult = displayMatch ? getMatchResult(displayMatch) : "No match";
-  const kda = displayMatch ? `${displayMatch.kills}/${displayMatch.deaths}/${displayMatch.assists}` : "—";
+  const kda = displayMatch
+    ? `${displayMatch.kills}/${displayMatch.deaths}/${displayMatch.assists}`
+    : "—";
 
   const ptsData = updatePtsFromMatches(matches);
   const pts = ptsData.pts;
 
   const rankData = getRankByPts(pts);
-  const rankImage = await loadRankImage(rankData.fileName, iconStyle);
+
+  let rankImage = null;
+
+  try {
+    rankImage = await loadRankImage(rankData.fileName, iconStyle);
+  } catch (e) {
+    rankImage = null;
+  }
 
   return {
     name,
@@ -207,9 +230,10 @@ function updatePtsFromMatches(matches) {
   if (RESET_PTS || !Keychain.contains(STORAGE_KEY_PTS)) {
     Keychain.set(STORAGE_KEY_PTS, String(START_PTS));
 
-    const latestRanked = getLatestTrackedMatch(matches);
-    if (latestRanked?.match_id) {
-      Keychain.set(STORAGE_KEY_MATCH, String(latestRanked.match_id));
+    const latestTracked = getLatestTrackedMatch(matches);
+
+    if (latestTracked?.match_id) {
+      Keychain.set(STORAGE_KEY_MATCH, String(latestTracked.match_id));
     }
 
     return {
@@ -220,7 +244,11 @@ function updatePtsFromMatches(matches) {
   }
 
   let pts = Number(Keychain.get(STORAGE_KEY_PTS));
-  if (isNaN(pts)) pts = START_PTS;
+
+  if (isNaN(pts)) {
+    pts = START_PTS;
+    Keychain.set(STORAGE_KEY_PTS, String(pts));
+  }
 
   const trackedMatches = matches.filter(isTrackedMatch);
 
@@ -238,6 +266,7 @@ function updatePtsFromMatches(matches) {
 
   if (!savedMatchId) {
     Keychain.set(STORAGE_KEY_MATCH, String(trackedMatches[0].match_id));
+
     return {
       pts,
       changed: false,
@@ -246,16 +275,28 @@ function updatePtsFromMatches(matches) {
   }
 
   const savedIndex = trackedMatches.findIndex(
-    m => String(m.match_id) === savedMatchId
+    m => String(m.match_id) === String(savedMatchId)
   );
 
-  let newMatches = [];
-
   if (savedIndex === -1) {
-    newMatches = [trackedMatches[0]];
-  } else if (savedIndex > 0) {
-    newMatches = trackedMatches.slice(0, savedIndex);
+    Keychain.set(STORAGE_KEY_MATCH, String(trackedMatches[0].match_id));
+
+    return {
+      pts,
+      changed: false,
+      changeText: ""
+    };
   }
+
+  if (savedIndex === 0) {
+    return {
+      pts,
+      changed: false,
+      changeText: ""
+    };
+  }
+
+  const newMatches = trackedMatches.slice(0, savedIndex);
 
   if (newMatches.length === 0) {
     return {
@@ -272,6 +313,7 @@ function updatePtsFromMatches(matches) {
   for (const match of newMatches) {
     const result = getMatchResult(match);
     const change = result === "Win" ? PTS_WIN : -PTS_LOSS;
+
     pts += change;
     totalChange += change;
   }
@@ -282,7 +324,11 @@ function updatePtsFromMatches(matches) {
   return {
     pts,
     changed: true,
-    changeText: totalChange > 0 ? `+${totalChange}` : `${totalChange}`
+    changeText: totalChange === 0
+      ? ""
+      : totalChange > 0
+        ? `+${totalChange}`
+        : `${totalChange}`
   };
 }
 
@@ -612,6 +658,7 @@ function getPtsLine(data, includeDelta) {
   if (includeDelta && data.ptsChangeText) {
     return `ПТС ${data.pts} ${data.ptsChangeText}`;
   }
+
   return `ПТС ${data.pts}`;
 }
 
@@ -695,6 +742,7 @@ async function fetchJson(url) {
   req.headers = {
     "User-Agent": "DotaRankWidget"
   };
+
   return await req.loadJSON();
 }
 
@@ -703,18 +751,23 @@ async function fetchImage(url) {
   req.headers = {
     "User-Agent": "DotaRankWidget"
   };
+
   return await req.loadImage();
 }
 
 function getMatchResult(match) {
+  if (!match) return "No match";
+
   const isRadiant = match.player_slot < 128;
   const won = isRadiant === match.radiant_win;
+
   return won ? "Win" : "Loss";
 }
 
 function formatTime(date) {
   const h = String(date.getHours()).padStart(2, "0");
   const m = String(date.getMinutes()).padStart(2, "0");
+
   return `${h}:${m}`;
 }
 
@@ -733,8 +786,9 @@ function buildError(w, e) {
 
   w.addSpacer(4);
 
-  const hint = w.addText(String(e).slice(0, 90));
+  const hint = w.addText(String(e).slice(0, 120));
   hint.font = Font.systemFont(8);
   hint.textColor = SUBTLE;
   hint.textOpacity = 0.75;
+  hint.lineLimit = 5;
 }
